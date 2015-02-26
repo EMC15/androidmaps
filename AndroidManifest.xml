@@ -20,10 +20,10 @@
         android:theme="@style/AppTheme" >
         <meta-data
             android:name="com.google.android.gms.version"
-            android:value="6188000" />
+            android:value="6171000" />
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="blah" />
+            android:value="AIzaSyC9gO3CmBxfyT_GKmWLYdHa4Vahs_ZqHkA" />
 
         <activity
             android:name=".MapsActivity"

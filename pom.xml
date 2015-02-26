@@ -27,6 +27,12 @@
         	<artifactId>support-v4</artifactId>
         	<version>LATEST</version>
         </dependency>
+		<dependency>
+			<groupId>com.jdroidframework</groupId>
+			<artifactId>google-play-services</artifactId>
+			<type>apklib</type>
+			<version>LATEST</version>
+		</dependency>
     </dependencies>
     <build>
         <sourceDirectory>java</sourceDirectory>
