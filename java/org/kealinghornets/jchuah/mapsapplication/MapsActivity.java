@@ -27,36 +27,41 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
 import com.google.android.gms.common.AccountPicker;
+
 import android.location.Location;
 import android.support.v4.app.DialogFragment;
 import android.util.Log;
 import android.widget.Toast;
 import android.accounts.AccountManager;
+
 import com.google.android.gms.maps.GoogleMap.OnMapLoadedCallback;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 
-public class MapsActivity extends FragmentActivity implements GoogleApiClient.ConnectionCallbacks, 
-  GoogleApiClient.OnConnectionFailedListener, LocationListener, GetUsernameTask.TokenListener, OnMapLoadedCallback {
+public class MapsActivity extends FragmentActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, GetUsernameTask.TokenListener, OnMapLoadedCallback {
 
 
-    protected GoogleMap mMap; // Might be null if Google Play services APK is not available
-    private GoogleApiClient mGoogleApiClient;
-    private Location mLastLocation;
-  	 private Location mCurrentLocation = null;
-    private LocationRequest mLocationRequest;
-	 private boolean mRequestingLocationUpdates = true;
-    private boolean mResolvingError = false;
+    static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
     // Request code to use when launching the resolution activity
     private static final int REQUEST_RESOLVE_ERROR = 1001;
-    
     private static final int REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR = 1002;
     // Unique tag for the error dialog fragment
     private static final String DIALOG_ERROR = "dialog_error";
-    // Bool to track whether the app is already resolving an error
-
+    private static final String SCOPE = "oauth2:https://www.googleapis.com/auth/userinfo.profile";
+    private static final String STATE_RESOLVING_ERROR = "resolving_error";
+    private static final String STATE_EMAIL = "org.kealinghornets.jchuah.mapsapplication.STATE_EMAIL";
+    private static final String STATE_OAUTHTOKEN = "org.kealinghornets.jchuah.mapsapplication.STATE_OAUTHTOKEN";
+    protected GoogleMap mMap; // Might be null if Google Play services APK is not available
     protected String OAuthToken;
+    // Bool to track whether the app is already resolving an error
     protected String mEmail;
-  
+    private GoogleApiClient mGoogleApiClient;
+    private Location mLastLocation;
+    private Location mCurrentLocation = null;
+    private LocationRequest mLocationRequest;
+    private boolean mRequestingLocationUpdates = true;
+    private boolean mResolvingError = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,15 +70,13 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
 
             mEmail = savedInstanceState.getString(STATE_EMAIL);
             OAuthToken = savedInstanceState.getString(STATE_OAUTHTOKEN);
-          
+
         }
         createLocationRequest();
         setContentView(R.layout.fragment_maps);
         buildGoogleApiClient();
         setUpMapIfNeeded();
     }
-
-    static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
 
     private void pickUserAccount() {
         Intent intent = AccountPicker.newChooseAccountIntent(null, null,
@@ -82,14 +85,12 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
     }
 
     protected synchronized void buildGoogleApiClient() {
-      mGoogleApiClient = new GoogleApiClient.Builder(this)
-      .addConnectionCallbacks(this)
-      .addOnConnectionFailedListener(this)
-      .addApi(LocationServices.API)
-      .build();
-    } 
-  
-
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+    }
 
     @Override
     protected void onPause() {
@@ -100,16 +101,16 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
     protected void stopLocationUpdates() {
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
-    
+
     @Override
     public void onResume() {
         super.onResume();
         if (mGoogleApiClient.isConnected() && !mRequestingLocationUpdates) {
             startLocationUpdates();
         }
-    		setUpMapIfNeeded();
+        setUpMapIfNeeded();
     }
-    
+
     protected void startLocationUpdates() {
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
@@ -128,7 +129,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         mGoogleApiClient.disconnect();
         super.onStop();
     }
-    
+
     /**
      * Sets up the map if it is possible to do so (i.e., the Google Play services APK is correctly
      * installed) and the map has not already been instantiated.. This will ensure that we only ever
@@ -144,7 +145,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
      * stopped or paused), {@link #onCreate(Bundle)} may not be called again so we should call this
      * method in {@link #onResume()} to guarantee that it will be called.
      */
-    
+
     private void setUpMapIfNeeded() {
         // Do a null check to confirm that we have not already instantiated the map.
         if (mMap == null) {
@@ -153,7 +154,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
                     .getMap();
             // Check if we were successful in obtaining the map.
             if (mMap != null) {
-              	 mMap.setOnMapLoadedCallback(this);
+                mMap.setOnMapLoadedCallback(this);
                 setUpMap();
             }
         }
@@ -165,12 +166,12 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
      * <p/>
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
-    
-    private void setUpMap() {
-      mMap.setMyLocationEnabled(true);
-      
 
-       // mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+    private void setUpMap() {
+        mMap.setMyLocationEnabled(true);
+
+
+        // mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
     }
 
     @Override
@@ -178,14 +179,14 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         // TODO Auto-generated method stub
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-           
-        }
-    	  if (mRequestingLocationUpdates) {
-        		startLocationUpdates(); 
 
-        }        
+        }
+        if (mRequestingLocationUpdates) {
+            startLocationUpdates();
+
+        }
     }
-  
+
     protected void createLocationRequest() {
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(10000);
@@ -211,11 +212,11 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
             // Show dialog using GooglePlayServicesUtil.getErrorDialog()
             showErrorDialog(result.getErrorCode());
             mResolvingError = true;
-        } 
-        
-        
+        }
+
+
     }
-    
+
     private void showErrorDialog(int errorCode) {
         // Create a fragment for the error dialog
         ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
@@ -225,29 +226,12 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         dialogFragment.setArguments(args);
         dialogFragment.show(getSupportFragmentManager(), "errordialog");
     }
+
     /* Called from ErrorDialogFragment when the dialog is dismissed. */
     public void onDialogDismissed() {
         mResolvingError = false;
     }
 
-    /* A fragment to display an error dialog */
-    public static class ErrorDialogFragment extends DialogFragment {
-        public ErrorDialogFragment() { }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            // Get the error code and retrieve the appropriate dialog
-            int errorCode = this.getArguments().getInt(DIALOG_ERROR);
-            return GooglePlayServicesUtil.getErrorDialog(errorCode,
-                    this.getActivity(), REQUEST_RESOLVE_ERROR);
-        }
-
-        @Override
-        public void onDismiss(DialogInterface dialog) {
-            ((MapsActivity)getActivity()).onDialogDismissed();
-        }
-    }
-    
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_RESOLVE_ERROR) {
@@ -260,49 +244,46 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
                 }
             }
         }
-      if (requestCode == REQUEST_CODE_PICK_ACCOUNT) {
-        // Receiving a result from the AccountPicker
-        if (resultCode == RESULT_OK) {
-            mEmail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-            // With the account name acquired, go get the auth token
-            getUsername();
-        } else if (resultCode == RESULT_CANCELED) {
-            // The account picker dialog closed without selecting an account.
-            // Notify users that they must pick an account to proceed.
-            Toast.makeText(this, "Choose an account with map access", Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_CODE_PICK_ACCOUNT) {
+            // Receiving a result from the AccountPicker
+            if (resultCode == RESULT_OK) {
+                mEmail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                // With the account name acquired, go get the auth token
+                getUsername();
+            } else if (resultCode == RESULT_CANCELED) {
+                // The account picker dialog closed without selecting an account.
+                // Notify users that they must pick an account to proceed.
+                Toast.makeText(this, "Choose an account with map access", Toast.LENGTH_SHORT).show();
+            }
         }
-    	}
-      if (requestCode == REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR) {
-        if (resultCode == RESULT_OK) {
-          getUsername();
+        if (requestCode == REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR) {
+            if (resultCode == RESULT_OK) {
+                getUsername();
+            }
         }
-      }
     }
-    
 
-	 private static final String SCOPE = "oauth2:https://www.googleapis.com/auth/userinfo.profile";
-    
     public void getUsername() {
         if (mEmail == null) {
-        		pickUserAccount();
-    	  } else {
+            pickUserAccount();
+        } else {
             if (isDeviceOnline()) {
                 new GetUsernameTask(MapsActivity.this, mEmail, SCOPE, this).execute();
             } else {
                 Toast.makeText(this, "You are not online", Toast.LENGTH_LONG).show();
             }
-    	  }
+        }
     }
-    
+
     public boolean isDeviceOnline() {
-    		ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-      	return cm.getActiveNetworkInfo() != null;
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        return cm.getActiveNetworkInfo() != null;
     }
 
     @Override
     public void onConnectionSuspended(int arg0) {
         // TODO Auto-generated method stub
-        
+
     }
 
     @Override
@@ -312,10 +293,6 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         mCurrentLocation = location;
     }
 
-    private static final String STATE_RESOLVING_ERROR = "resolving_error";
-	 private static final String STATE_EMAIL = "org.kealinghornets.jchuah.mapsapplication.STATE_EMAIL";
-    private static final String STATE_OAUTHTOKEN = "org.kealinghornets.jchuah.mapsapplication.STATE_OAUTHTOKEN";
-    
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -329,7 +306,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         // TODO Auto-generated method stub
         OAuthToken = token;
         Toast.makeText(this, "OAuthToken granted", Toast.LENGTH_LONG).show();
-        
+
     }
 
     @Override
@@ -338,10 +315,10 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         OAuthToken = null;
 
         if (e instanceof UserRecoverableAuthException) {
-		       startActivityForResult(
-                  ((UserRecoverableAuthException)e).getIntent(),
-                  REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR);
-          
+            startActivityForResult(
+                    ((UserRecoverableAuthException) e).getIntent(),
+                    REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR);
+
         }
     }
 
@@ -350,8 +327,27 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         // TODO Auto-generated method stub
         Toast.makeText(this, "Map loaded", Toast.LENGTH_SHORT).show();
         if (mEmail == null || OAuthToken == null) {
-          pickUserAccount();
+            pickUserAccount();
         }
     }
-    
+
+    /* A fragment to display an error dialog */
+    public static class ErrorDialogFragment extends DialogFragment {
+        public ErrorDialogFragment() {
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Get the error code and retrieve the appropriate dialog
+            int errorCode = this.getArguments().getInt(DIALOG_ERROR);
+            return GooglePlayServicesUtil.getErrorDialog(errorCode,
+                    this.getActivity(), REQUEST_RESOLVE_ERROR);
+        }
+
+        @Override
+        public void onDismiss(DialogInterface dialog) {
+            ((MapsActivity) getActivity()).onDialogDismissed();
+        }
+    }
+
 }
