@@ -33,6 +33,11 @@
 			<type>apklib</type>
 			<version>LATEST</version>
 		</dependency>
+      <dependency>
+        	<groupId>com.loopj.android</groupId>
+        	<artifactId>android-async-http</artifactId>
+         <version>LATEST</version>
+      </dependency>
     </dependencies>
     <build>
         <sourceDirectory>java</sourceDirectory>

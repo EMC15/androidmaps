@@ -1,9 +1,11 @@
 package org.kealinghornets.jchuah.mapsapplication;
 
 
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender.SendIntentException;
@@ -23,38 +25,61 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
+import com.google.android.gms.common.AccountPicker;
 import android.location.Location;
 import android.support.v4.app.DialogFragment;
+import android.util.Log;
+import android.widget.Toast;
+import android.accounts.AccountManager;
+import com.google.android.gms.maps.GoogleMap.OnMapLoadedCallback;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 
 public class MapsActivity extends FragmentActivity implements GoogleApiClient.ConnectionCallbacks, 
-  GoogleApiClient.OnConnectionFailedListener, LocationListener {
+  GoogleApiClient.OnConnectionFailedListener, LocationListener, GetUsernameTask.TokenListener, OnMapLoadedCallback {
 
 
-    private GoogleMap mMap; // Might be null if Google Play services APK is not available
+    protected GoogleMap mMap; // Might be null if Google Play services APK is not available
     private GoogleApiClient mGoogleApiClient;
     private Location mLastLocation;
-  	 private Location mCurrentLocation;
+  	 private Location mCurrentLocation = null;
     private LocationRequest mLocationRequest;
 	 private boolean mRequestingLocationUpdates = true;
     private boolean mResolvingError = false;
     // Request code to use when launching the resolution activity
     private static final int REQUEST_RESOLVE_ERROR = 1001;
+    
+    private static final int REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR = 1002;
     // Unique tag for the error dialog fragment
     private static final String DIALOG_ERROR = "dialog_error";
     // Bool to track whether the app is already resolving an error
-  
+
+    protected String OAuthToken;
+    protected String mEmail;
   
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-	     mResolvingError = savedInstanceState != null
-            && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
+        if (savedInstanceState != null) {
+            mResolvingError = savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
+
+            mEmail = savedInstanceState.getString(STATE_EMAIL);
+            OAuthToken = savedInstanceState.getString(STATE_OAUTHTOKEN);
+          
+        }
         createLocationRequest();
         setContentView(R.layout.fragment_maps);
         buildGoogleApiClient();
         setUpMapIfNeeded();
     }
 
+    static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
+
+    private void pickUserAccount() {
+        Intent intent = AccountPicker.newChooseAccountIntent(null, null,
+                null, false, null, null, null, null);
+        startActivityForResult(intent, REQUEST_CODE_PICK_ACCOUNT);
+    }
 
     protected synchronized void buildGoogleApiClient() {
       mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -128,6 +153,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
                     .getMap();
             // Check if we were successful in obtaining the map.
             if (mMap != null) {
+              	 mMap.setOnMapLoadedCallback(this);
                 setUpMap();
             }
         }
@@ -142,6 +168,8 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
     
     private void setUpMap() {
       mMap.setMyLocationEnabled(true);
+      
+
        // mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
     }
 
@@ -154,6 +182,7 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
         }
     	  if (mRequestingLocationUpdates) {
         		startLocationUpdates(); 
+
         }        
     }
   
@@ -231,6 +260,43 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
                 }
             }
         }
+      if (requestCode == REQUEST_CODE_PICK_ACCOUNT) {
+        // Receiving a result from the AccountPicker
+        if (resultCode == RESULT_OK) {
+            mEmail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+            // With the account name acquired, go get the auth token
+            getUsername();
+        } else if (resultCode == RESULT_CANCELED) {
+            // The account picker dialog closed without selecting an account.
+            // Notify users that they must pick an account to proceed.
+            Toast.makeText(this, "Choose an account with map access", Toast.LENGTH_SHORT).show();
+        }
+    	}
+      if (requestCode == REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR) {
+        if (resultCode == RESULT_OK) {
+          getUsername();
+        }
+      }
+    }
+    
+
+	 private static final String SCOPE = "oauth2:https://www.googleapis.com/auth/userinfo.profile";
+    
+    public void getUsername() {
+        if (mEmail == null) {
+        		pickUserAccount();
+    	  } else {
+            if (isDeviceOnline()) {
+                new GetUsernameTask(MapsActivity.this, mEmail, SCOPE, this).execute();
+            } else {
+                Toast.makeText(this, "You are not online", Toast.LENGTH_LONG).show();
+            }
+    	  }
+    }
+    
+    public boolean isDeviceOnline() {
+    		ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+      	return cm.getActiveNetworkInfo() != null;
     }
 
     @Override
@@ -240,17 +306,52 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
     }
 
     @Override
-    public void onLocationChanged(Location arg0) {
+    public void onLocationChanged(Location location) {
         // TODO Auto-generated method stub
-        mCurrentLocation = arg0;
+        mLastLocation = mCurrentLocation;
+        mCurrentLocation = location;
     }
 
     private static final String STATE_RESOLVING_ERROR = "resolving_error";
-
+	 private static final String STATE_EMAIL = "org.kealinghornets.jchuah.mapsapplication.STATE_EMAIL";
+    private static final String STATE_OAUTHTOKEN = "org.kealinghornets.jchuah.mapsapplication.STATE_OAUTHTOKEN";
+    
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(STATE_RESOLVING_ERROR, mResolvingError);
+        outState.putString(STATE_EMAIL, mEmail);
+        outState.putString(STATE_OAUTHTOKEN, OAuthToken);
+    }
+
+    @Override
+    public void onFetchToken(String token) {
+        // TODO Auto-generated method stub
+        OAuthToken = token;
+        Toast.makeText(this, "OAuthToken granted", Toast.LENGTH_LONG).show();
+        
+    }
+
+    @Override
+    public void onFetchTokenException(Exception e) {
+        // TODO Auto-generated method stub
+        OAuthToken = null;
+
+        if (e instanceof UserRecoverableAuthException) {
+		       startActivityForResult(
+                  ((UserRecoverableAuthException)e).getIntent(),
+                  REQUEST_RESOLVE_USER_RECOVERABLE_AUTH_ERROR);
+          
+        }
+    }
+
+    @Override
+    public void onMapLoaded() {
+        // TODO Auto-generated method stub
+        Toast.makeText(this, "Map loaded", Toast.LENGTH_SHORT).show();
+        if (mEmail == null || OAuthToken == null) {
+          pickUserAccount();
+        }
     }
     
 }
