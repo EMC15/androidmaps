@@ -1,24 +1,38 @@
 package org.kealinghornets.jchuah.mapsapplication;
 
 
+import org.apache.http.Header;
+
+import com.google.android.gms.maps.GoogleMap;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
 public class KMLDownloader {
-    private static final String BASE_URL = "http://api.twitter.com/1/";
 
-    private static AsyncHttpClient client = new AsyncHttpClient();
+  
+  public void load(GoogleMap map, String url) {
+  		this.mMap = map;
+    	this.mUrl = url;
+  }
+  
+  class KMLHandler extends AsyncHttpResponseHandler {
+    @Override
+    public void onFailure(int arg0, Header[] arg1, byte[] arg2,
+                          Throwable arg3) {
+      // TODO Auto-generated method stub
 
-    public static void get(String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {
-        client.get(getAbsoluteUrl(url), params, responseHandler);
     }
 
-    public static void post(String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {
-        client.post(getAbsoluteUrl(url), params, responseHandler);
-    }
+    @Override
+    public void onSuccess(int statusCode, Header[] headers, byte[] body) {
+      // TODO Auto-generated method stub
+      if (statusCode == 200) {
 
-    private static String getAbsoluteUrl(String relativeUrl) {
-        return BASE_URL + relativeUrl;
+      }
     }
+    
+  }
+  
+
 }

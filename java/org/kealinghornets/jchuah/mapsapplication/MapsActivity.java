@@ -326,9 +326,11 @@ public class MapsActivity extends FragmentActivity implements GoogleApiClient.Co
     public void onMapLoaded() {
         // TODO Auto-generated method stub
         Toast.makeText(this, "Map loaded", Toast.LENGTH_SHORT).show();
+      /*
         if (mEmail == null || OAuthToken == null) {
             pickUserAccount();
         }
+        */
     }
 
     /* A fragment to display an error dialog */
